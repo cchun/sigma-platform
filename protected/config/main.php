@@ -6,6 +6,7 @@
 // This is the main Web application configuration. Any writable
 // CWebApplication properties can be configured here.
 return array(
+	'language'=>'zh_cn',
 	'basePath'=>dirname(__FILE__).DIRECTORY_SEPARATOR.'..',
 	'name'=>'My Web Application',
 
@@ -18,12 +19,12 @@ return array(
 		'application.components.*',
 	),
 
-	'modules'=>array(					//GII模块
+	'modules'=>array(
 		// uncomment the following to enable the Gii tool
 		
 		'gii'=>array(
 			'class'=>'system.gii.GiiModule',
-			'password'=>'jiangliwu',
+			'password'=>'1',
 			// If removed, Gii defaults to localhost only. Edit carefully to taste.
 			'ipFilters'=>array('127.0.0.1','::1'),
 		),
@@ -47,16 +48,13 @@ return array(
 			),
 		),
 		*/
-		/*
 		'db'=>array(
 			'connectionString' => 'sqlite:'.dirname(__FILE__).'/../data/testdrive.db',
 		),
-		*/
-
 		// uncomment the following to use a MySQL database
-		//mysql的连接
+		
 		'db'=>array(
-			'connectionString' => 'mysql:host=localhost;dbname=vainner',
+			'connectionString' => 'mysql:host=localhost;dbname=my_blog',
 			'emulatePrepare' => true,
 			'username' => 'root',
 			'password' => '',

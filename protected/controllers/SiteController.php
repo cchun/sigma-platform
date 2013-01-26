@@ -2,6 +2,7 @@
 
 class SiteController extends Controller
 {
+	public $layout='//layouts/userOnline';
 	/**
 	 * Declares class-based actions.
 	 */
@@ -92,7 +93,24 @@ class SiteController extends Controller
 			$model->attributes=$_POST['LoginForm'];
 			// validate user input and redirect to the previous page if valid
 			if($model->validate() && $model->login())
+			{
+				
+				//把登录用户信息添加到tbl_useronline表上
+				$tbl_useron = new TblUseronline();
+				$tbl_useron->name = Yii::app()->user->name;
+				$tbl_useron->time_now = date("YmdHis");
+				$tbl_useron->fromtime = date("YmdHis");
+				$tbl_useron->save();
+				
+				
+				$user = Yii::app()->user->name;
+				$namefrom = $user;
+				$nameto = "【系统消息】";
+				$content = $user."进入了聊天室!";
+			//	$this->render('test', array('para'=>$content));
+				$this->addToTblChatcont($namefrom, $nameto, $content);
 				$this->redirect(Yii::app()->user->returnUrl);
+			}	
 		}
 		// display the login form
 		$this->render('login',array('model'=>$model));
@@ -103,7 +121,145 @@ class SiteController extends Controller
 	 */
 	public function actionLogout()
 	{
+		$user = Yii::app()->user->name;
 		Yii::app()->user->logout();
+		//TblUseronline::delete(Yii::app()->user->name);
+		$tbl_useron = new tblUseronline();
+		$tbl_useron->deleteAll("name='$user'");
+		//$this->render('test', array('na'=>$na));
+		
+		$namefrom = $user;
+		$nameto = "【系统消息】";
+		$content = $user."离开了聊天室!";
+		$this->addToTblChatcont($namefrom, $nameto, $content);
 		$this->redirect(Yii::app()->homeUrl);
 	}
+	
+	public function actionTalk() {
+		if(Yii::app()->user->isGuest)
+       		 throw new CHttpException(iconv('gb2312', 'utf-8', "请先登录"));
+        
+		$user = Yii::app()->user->name;
+		$modelarray = $this->getTalkLog();
+		$tmp = "";
+		foreach($modelarray as $model) {
+			if($model->nameto == iconv("gb2312","utf-8", "所有人")) {
+				$model->nameto = iconv("gb2312","utf-8", "【闲聊】");
+				$model->content = iconv("gb2312","utf-8", "说:").$model->content;
+			}
+			else {
+				$model->namefrom = "";
+			}
+			$tmp .= $model->nameto.$model->namefrom.$model->content."\n";
+		}
+		$model = new TblChatcontent;
+		$model->content = $tmp;
+		$model1 = new TblChatcontent;
+		
+		//$model为TblUseronline
+		if(isset($_POST['TblChatcontent']))
+		{
+			$model1->attributes=$_POST['TblChatcontent'];
+			$model1->namefrom = $user;
+			$model1->nameto=iconv("gb2312","utf-8", "所有人");
+			$model1->time = date("YmdHis");
+			$model1->save();
+		}
+		
+		$array = array("HHHHH");
+		$this->render('talkIndex',array(
+			'model'=>$model,
+			'model1'=>$model1, 
+			'data'=>$array
+		));
+	}
+
+	
+	public function actionUpdateAjax() {
+		
+		$user = Yii::app()->user->name;
+		$modelarray = $this->getTalkLog();
+		$tmp = "";
+		foreach($modelarray as $model) {
+			if($model->nameto == iconv("gb2312","utf-8", "所有人")) {
+				$model->nameto = iconv("gb2312","utf-8", "【闲聊】");
+				$model->content = iconv("gb2312","utf-8", "说:").$model->content;
+			}
+			else {
+				$model->namefrom = "";
+			}
+			$tmp .= $model->nameto.$model->namefrom.$model->content."\n";
+		}
+		$model = new TblChatcontent;
+		$model->content = $tmp;
+		
+		$this->renderPartial('_talklog', array('model'=>$model));
+		//$this->renderPartial('test', array('para'=>"HHHHHHHHHH"));	
+	}
+	
+	public function actionUpdateUseronline() {
+		$model = new TblUseronline;
+		$modelArray = $model->findAll();
+		
+		foreach($modelArray as $mod) {
+		/*	$this->menu=array(
+				array('label'=>$mod->name),
+			);*/
+			array_push($this->menu, array('label'=>$mod->name));
+		}
+		$this->renderPartial('//layouts/userOnline');	
+		//$this->renderPartial('test', array('para'=>$this->menu));	
+	}
+	
+	//得到需要显示的聊天内容 
+	private function getTalkLog() {
+		$model = $this->getFromtime();
+		$time = $model->fromtime;
+		$timer = $this->dotimer($time);
+		
+		$model = new TblChatcontent();
+		$res = $model->findAll("time > $timer");
+		return $res; //array
+	}
+
+	public function af() {
+		return "哈哈test";
+	}
+	
+	//得到用户的显示聊天内容的起始时间
+	private function getFromtime() {
+		$user = Yii::app()->user->name;
+		$tbl_useronline = new TblUseronline();
+		$res = $tbl_useronline->find("name='$user'");
+		return $res;
+	}
+	
+	//chang the string time to double time 
+	private function dotimer($timer) {
+		$timer = str_replace("-", "", $timer);
+		$timer = str_replace(":", "", $timer);
+		$timer = str_replace(" ", "", $timer);
+		$timer = chop($timer);		
+		return doubleval($timer);
+	}
+	
+	/**
+	 * function:插入数据到$tbl_chatcontent
+	 * para:发送者 接受者  内容
+	 */
+	 private function addToTblChatcont($namefrom, $nameto, $content) {
+		$tbl_userChatcontent = new TblChatcontent();
+		$tbl_userChatcontent->time = date("YmdHis")+1;
+		$tbl_userChatcontent->namefrom = iconv("gb2312","utf-8", $namefrom);
+		$tbl_userChatcontent->nameto = iconv("gb2312","utf-8", $nameto);
+		$tbl_userChatcontent->content = iconv("gb2312","utf-8", $content);
+		$tbl_userChatcontent->save();
+	 }
+	 
 }
+
+
+
+
+
+
