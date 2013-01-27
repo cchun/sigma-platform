@@ -21,14 +21,14 @@ class UserIdentity extends CUserIdentity
 	public function authenticate()
 	{
 		$username = strtolower($this->username);
-		$user = TblUser::model()->find("LOWER(username)=?", array($username));	
+		$user = User::model()->find("LOWER(user_username)=?", array($username));	
 		if($user == null) {
 			$this->errorCode = self::ERROR_USERNAME_INVALID;
 		}
-		else if(!$user->validatePassword($user->password))
+		else if(!$user->validatePassword($user->user_password))
 			$this->errorCode = self::ERROR_PASSWORD_INVALID;
 		else {
-			$this->_id = $user->id;
+			$this->_id = $user->user_id;
 			$this->username = $username;
 			$this->errorCode = self::ERROR_NONE;
 		}

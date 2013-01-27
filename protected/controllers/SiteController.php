@@ -96,10 +96,10 @@ class SiteController extends Controller
 			{
 				
 				//把登录用户信息添加到tbl_useronline表上
-				$tbl_useron = new TblUseronline();
-				$tbl_useron->name = Yii::app()->user->name;
-				$tbl_useron->time_now = date("YmdHis");
-				$tbl_useron->fromtime = date("YmdHis");
+				$tbl_useron = new UserOnline();
+				$tbl_useron->online_name = Yii::app()->user->name;
+				$tbl_useron->online_time_now = date("YmdHis");
+				$tbl_useron->online_from_time = date("YmdHis");
 				$tbl_useron->save();
 				
 				
@@ -110,6 +110,7 @@ class SiteController extends Controller
 			//	$this->render('test', array('para'=>$content));
 				$this->addToTblChatcont($namefrom, $nameto, $content);
 				$this->redirect(Yii::app()->user->returnUrl);
+			//	$this->render('test', array('para'=>"HHHHHHHHH"));
 			}	
 		}
 		// display the login form
@@ -124,8 +125,8 @@ class SiteController extends Controller
 		$user = Yii::app()->user->name;
 		Yii::app()->user->logout();
 		//TblUseronline::delete(Yii::app()->user->name);
-		$tbl_useron = new tblUseronline();
-		$tbl_useron->deleteAll("name='$user'");
+		$tbl_useron = new UserOnline();
+		$tbl_useron->deleteAll("online_name='$user'");
 		//$this->render('test', array('na'=>$na));
 		
 		$namefrom = $user;
@@ -135,6 +136,7 @@ class SiteController extends Controller
 		$this->redirect(Yii::app()->homeUrl);
 	}
 	
+	
 	public function actionTalk() {
 		if(Yii::app()->user->isGuest)
        		 throw new CHttpException(iconv('gb2312', 'utf-8', "请先登录"));
@@ -143,26 +145,26 @@ class SiteController extends Controller
 		$modelarray = $this->getTalkLog();
 		$tmp = "";
 		foreach($modelarray as $model) {
-			if($model->nameto == iconv("gb2312","utf-8", "所有人")) {
-				$model->nameto = iconv("gb2312","utf-8", "【闲聊】");
-				$model->content = iconv("gb2312","utf-8", "说:").$model->content;
+			if($model->message_reciever == iconv("gb2312","utf-8", "所有人")) {
+				$model->message_reciever = iconv("gb2312","utf-8", "【闲聊】");
+				$model->message_content = iconv("gb2312","utf-8", "说:").$model->message_content;
 			}
 			else {
-				$model->namefrom = "";
+				$model->message_sender = "";
 			}
-			$tmp .= $model->nameto.$model->namefrom.$model->content."\n";
+			$tmp .= $model->message_reciever.$model->message_sender.$model->message_content."\n";
 		}
-		$model = new TblChatcontent;
-		$model->content = $tmp;
-		$model1 = new TblChatcontent;
+		$model = new Message;
+		$model->message_content = $tmp;
+		$model1 = new Message;
 		
 		//$model为TblUseronline
-		if(isset($_POST['TblChatcontent']))
+		if(isset($_POST['Message']))
 		{
-			$model1->attributes=$_POST['TblChatcontent'];
-			$model1->namefrom = $user;
-			$model1->nameto=iconv("gb2312","utf-8", "所有人");
-			$model1->time = date("YmdHis");
+			$model1->attributes=$_POST['Message'];
+			$model1->message_sender = $user;
+			$model1->message_reciever =iconv("gb2312","utf-8", "所有人");
+			$model1->message_time = date("YmdHis");
 			$model1->save();
 		}
 		
@@ -174,31 +176,33 @@ class SiteController extends Controller
 		));
 	}
 
-	
+	/**
+	 * function:动态刷新聊天窗口，供ajax调用
+	 */
 	public function actionUpdateAjax() {
 		
 		$user = Yii::app()->user->name;
 		$modelarray = $this->getTalkLog();
 		$tmp = "";
 		foreach($modelarray as $model) {
-			if($model->nameto == iconv("gb2312","utf-8", "所有人")) {
-				$model->nameto = iconv("gb2312","utf-8", "【闲聊】");
-				$model->content = iconv("gb2312","utf-8", "说:").$model->content;
+			if($model->message_reciever == iconv("gb2312","utf-8", "所有人")) {
+				$model->message_reciever = iconv("gb2312","utf-8", "【闲聊】");
+				$model->message_content = iconv("gb2312","utf-8", "说:").$model->message_content;
 			}
 			else {
-				$model->namefrom = "";
+				$model->message_sender = "";
 			}
-			$tmp .= $model->nameto.$model->namefrom.$model->content."\n";
+			$tmp .= $model->message_reciever.$model->message_sender.$model->message_content."\n";
 		}
-		$model = new TblChatcontent;
-		$model->content = $tmp;
+		$model = new Message;
+		$model->message_content = $tmp;
 		
 		$this->renderPartial('_talklog', array('model'=>$model));
 		//$this->renderPartial('test', array('para'=>"HHHHHHHHHH"));	
 	}
 	
 	public function actionUpdateUseronline() {
-		$model = new TblUseronline;
+		$model = new UserOnline;
 		$modelArray = $model->findAll();
 		
 		foreach($modelArray as $mod) {
@@ -214,11 +218,11 @@ class SiteController extends Controller
 	//得到需要显示的聊天内容 
 	private function getTalkLog() {
 		$model = $this->getFromtime();
-		$time = $model->fromtime;
+		$time = $model->online_from_time;
 		$timer = $this->dotimer($time);
 		
-		$model = new TblChatcontent();
-		$res = $model->findAll("time > $timer");
+		$model = new Message();
+		$res = $model->findAll("message_time > $timer");
 		return $res; //array
 	}
 
@@ -229,8 +233,8 @@ class SiteController extends Controller
 	//得到用户的显示聊天内容的起始时间
 	private function getFromtime() {
 		$user = Yii::app()->user->name;
-		$tbl_useronline = new TblUseronline();
-		$res = $tbl_useronline->find("name='$user'");
+		$tbl_useronline = new UserOnline();
+		$res = $tbl_useronline->find("online_name='$user'");
 		return $res;
 	}
 	
@@ -244,19 +248,26 @@ class SiteController extends Controller
 	}
 	
 	/**
-	 * function:插入数据到$tbl_chatcontent
+	 * function:插入数据到$sigma_message_content
 	 * para:发送者 接受者  内容
 	 */
 	 private function addToTblChatcont($namefrom, $nameto, $content) {
-		$tbl_userChatcontent = new TblChatcontent();
-		$tbl_userChatcontent->time = date("YmdHis")+1;
-		$tbl_userChatcontent->namefrom = iconv("gb2312","utf-8", $namefrom);
-		$tbl_userChatcontent->nameto = iconv("gb2312","utf-8", $nameto);
-		$tbl_userChatcontent->content = iconv("gb2312","utf-8", $content);
+		$tbl_userChatcontent = new Message();
+		$tbl_userChatcontent->message_time = date("YmdHis")+1;
+		$tbl_userChatcontent->message_sender = iconv("gb2312","utf-8", $namefrom);
+		$tbl_userChatcontent->message_reciever = iconv("gb2312","utf-8", $nameto);
+		$tbl_userChatcontent->message_content = iconv("gb2312","utf-8", $content);
 		$tbl_userChatcontent->save();
 	 }
-	 
 }
+
+
+
+
+
+
+
+
 
 
 

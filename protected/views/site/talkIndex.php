@@ -47,12 +47,13 @@ array_push($this->menu, array('label'=>'demo1'));
 		        $.ajax({
 		            'url': "<?php echo CController::createUrl('site/UpdateAjax')?>",
 		            'cache':false,
-		            'success':function(html){
-		                jQuery("#log").html(html)
+		            'success':function(data){
+		                jQuery("#log").html(data);
+		                
 		            }
 		        });
 		}
-		setInterval(updateNews, 3000);
+		setInterval(updateNews, 2000);
 	});
 </script>
 
